@@ -1,4 +1,4 @@
-# Golang Course Exercises
+# Golang Course Exercises Quera
 
 ![Go Logo](https://go.dev/images/go-logo-blue.svg)
 
@@ -16,5 +16,5 @@ This repository contains all exercises and projects for the [Golang course on Qu
 ## 🚀 How to Run
 Navigate to any exercise folder and run:
 ```bash
-cd season1/exercise1-basic-syntax
+cd season1/[proge name]
 go run main.go

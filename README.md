@@ -1,18 +1,20 @@
-# دوره آموزشی Golang 
+# Golang Course Exercises
 
-این ریپوزیتوری شامل تمرین‌ها و پروژه‌های دوره **Golang** ارائه شده در پلتفرم [کوئرا](https://quera.org/college/landpage/14961/golang) است.  
-هدف اصلی، یادگیری و تمرین مفاهیم پایه تا پیشرفته زبان Go با پیاده‌سازی مثال‌های واقعی است.
+![Go Logo](https://go.dev/images/go-logo-blue.svg)
 
-### سرفصل‌های کلیدی دوره:
-- مفاهیم پایه (متغیرها، توابع، کنترل جریان)  
-- ساختارها (`struct`)، واسط‌ها (`interface`)  
-- هم‌روندی (`goroutine`, `channel`)  
-- کار با فایل‌ها و کتابخانه‌های استاندارد
-- کار با SQL
-- مبانی بک اند  
+This repository contains all exercises and projects for the [Golang course on Quera](https://quera.org/college/landpage/14961/golang).
 
-### نحوه استفاده:
-هر پوشه مربوط به یک تمرین یا پروژه است. برای اجرا:
+## 📚 Course Content
+- Basic syntax (variables, functions, control structures)
+- Structs and interfaces
+- Concurrency (goroutines, channels)
+- File operations
+- Database operations with SQL
+- Backend development fundamentals
+
+
+## 🚀 How to Run
+Navigate to any exercise folder and run:
 ```bash
-cd season1/[proge name]
+cd season1/exercise1-basic-syntax
 go run main.go

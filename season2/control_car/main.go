@@ -39,5 +39,5 @@ func TryFinish(car *Car, distance int) string {
 	}
 	time := float64(distance) / float64(car.speed)
 	car.battery -= int(math.Floor(batteryNeeded))
-	return fmt.Sprintf("%.2f hours", time)
+	return fmt.Sprintf("%.2f", time)
 }

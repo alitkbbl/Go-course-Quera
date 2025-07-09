@@ -1,6 +1,9 @@
 package main
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 type Player struct {
 	name         string
@@ -18,17 +21,32 @@ type Map struct {
 }
 
 type Game struct {
-	maps    map[string]*Map
+	maps    map[int]*Map
 	players map[string]*Player
 	lock    sync.RWMutex
 }
 
 func NewGame(mapIds []int) (*Game, error) {
-	return nil, nil
+	m := make(map[int]*Map)
+	for _, v := range mapIds {
+		if v <= 0 {
+			return nil, errors.New("")
+		}
+		m[v] = &Map{id: v}
+	}
+	myNewGame := &Game{maps: m}
+	return myNewGame, nil
 }
 
 func (g *Game) ConnectPlayer(name string) error {
-	return nil
+	val, ok := g.players[name]
+	if ok {
+		return errors.New(val.name)
+	} else {
+		newPlayer := &Player{name: name, game: g}
+		g.players[name] = newPlayer
+		return nil
+	}
 }
 
 func (g *Game) SwitchPlayerMap(name string, mapId int) error {

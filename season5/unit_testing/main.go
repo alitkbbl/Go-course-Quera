@@ -19,3 +19,7 @@ func TestFooer(t *testing.T) {
 		t.Errorf("Result was incorrect, got: %s, want: %s", result, "Foo")
 	}
 }
+
+func main() {
+	TestFooer(&testing.T{})
+}

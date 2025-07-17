@@ -92,7 +92,6 @@ func (s *Store) ProductsList() ([]string, error) {
 			names = append(names, p.name)
 		}
 	}
-
 	if len(names) == 0 {
 		return nil, errors.New("store is empty")
 	}

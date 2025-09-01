@@ -1,0 +1,182 @@
+
+1. صفحه‌بندی کاربران با اطلاعات aggregate
+
+func GetUsersWithStats(page, pageSize int) ([]UserStats, error) {
+    var stats []UserStats
+    
+    offset := (page - 1) * pageSize
+    
+    err := db.Table("users").
+        Select(`
+            users.*,
+            COUNT(orders.id) as order_count,
+            COALESCE(SUM(orders.amount), 0) as total_spent
+        `).
+        Joins("LEFT JOIN orders ON users.id = orders.user_id AND orders.status = 'completed'").
+        Group("users.id").
+        Order("total_spent DESC").
+        Limit(pageSize).
+        Offset(offset).
+        Scan(&stats).Error
+        
+    return stats, err
+}
+
+
+=======================================================================
+
+2. گزارش فروش روزانه
+
+func GetDailySalesReport(startDate, endDate time.Time) ([]DailySales, error) {
+    var report []DailySales
+    
+    err := db.Model(&Order{}).
+        Select(`
+            DATE(created_at) as date,
+            COUNT(*) as order_count,
+            SUM(amount) as total_revenue,
+            AVG(amount) as average_order_value
+        `).
+        Where("created_at BETWEEN ? AND ?", startDate, endDate).
+        Where("status = ?", "completed").
+        Group("DATE(created_at)").
+        Order("date DESC").
+        Scan(&report).Error
+        
+    return report, err
+}
+
+
+=======================================================================
+
+3. جستجوی پیشرفته کاربران
+
+func GetDailySalesReport(startDate, endDate time.Time) ([]DailySales, error) {
+    var report []DailySales
+    
+    err := db.Model(&Order{}).
+        Select(`
+            DATE(created_at) as date,
+            COUNT(*) as order_count,
+            SUM(amount) as total_revenue,
+            AVG(amount) as average_order_value
+        `).
+        Where("created_at BETWEEN ? AND ?", startDate, endDate).
+        Where("status = ?", "completed").
+        Group("DATE(created_at)").
+        Order("date DESC").
+        Scan(&report).Error
+        
+    return report, err
+}
+
+
+=======================================================================
+
+
+func SearchUsers(criteria UserSearchCriteria) ([]User, error) {
+    query := db.Model(&User{})
+    
+    if criteria.Name != "" {
+        query = query.Where("name LIKE ?", "%"+criteria.Name+"%")
+    }
+    
+    if criteria.MinAge > 0 {
+        query = query.Where("age >= ?", criteria.MinAge)
+    }
+    
+    if criteria.MaxAge > 0 {
+        query = query.Where("age <= ?", criteria.MaxAge)
+    }
+    
+    if criteria.Active != nil {
+        query = query.Where("active = ?", *criteria.Active)
+    }
+    
+    if len(criteria.Cities) > 0 {
+        query = query.Where("city IN ?", criteria.Cities)
+    }
+    
+    var users []User
+    err := query.
+        Preload("Profile").
+        Preload("Orders", "status = 'completed'").
+        Order("created_at DESC").
+        Limit(criteria.Limit).
+        Offset(criteria.Offset).
+        Find(&users).Error
+        
+    return users, err
+}
+
+
+=======================================================================
+
+🏗️ مدل‌های کامل و حرفه‌ای
+
+package main
+
+import (
+    "fmt"
+    "log"
+    "time"
+    "gorm.io/driver/mysql"
+    "gorm.io/gorm"
+    "gorm.io/gorm/logger"
+)
+
+// 📊 مدل Job (جدول مشاغل)
+type Job struct {
+    ID          uint      `gorm:"primaryKey" json:"id"`
+    Title       string    `gorm:"size:100;not null" json:"title"`
+    Description string    `gorm:"type:text" json:"description"`
+    Level       string    `gorm:"size:50;default:'mid'" json:"level"` // junior, mid, senior
+    SalaryRange string    `gorm:"size:100" json:"salary_range"`
+    IsActive    bool      `gorm:"default:true" json:"is_active"`
+    CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
+    UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+    
+    // روابط
+    Users       []User    `gorm:"foreignKey:JobID" json:"users,omitempty"`
+}
+
+// 👥 مدل User (جدول کاربران)
+type User struct {
+    ID           uint      `gorm:"primaryKey" json:"id"`
+    FirstName    string    `gorm:"size:50;not null" json:"first_name"`
+    LastName     string    `gorm:"size:50;not null" json:"last_name"`
+    Email        string    `gorm:"size:100;uniqueIndex;not null" json:"email"`
+    Phone        string    `gorm:"size:20" json:"phone"`
+    Age          int       `gorm:"check:age > 0" json:"age"`
+    Salary       float64   `gorm:"default:0" json:"salary"`
+    IsActive     bool      `gorm:"default:true" json:"is_active"`
+    HireDate     time.Time `json:"hire_date"`
+    CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
+    UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+    
+    // 🔗 رابطه با Job
+    JobID        uint      `json:"job_id"`
+    Job          Job       `gorm:"foreignKey:JobID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"job"`
+}
+
+// 📋 مدل برای گزارش‌های پیشرفته
+type UserJobReport struct {
+    UserID      uint    `json:"user_id"`
+    FullName    string  `json:"full_name"`
+    Email       string  `json:"email"`
+    JobTitle    string  `json:"job_title"`
+    JobLevel    string  `json:"job_level"`
+    Salary      float64 `json:"salary"`
+    HireDate    string  `json:"hire_date"`
+}
+
+// 📈 مدل برای آمار
+type JobStats struct {
+    JobTitle    string  `json:"job_title"`
+    TotalUsers  int     `json:"total_users"`
+    AvgSalary   float64 `json:"avg_salary"`
+    MinSalary   float64 `json:"min_salary"`
+    MaxSalary   float64 `json:"max_salary"`
+}
+
+

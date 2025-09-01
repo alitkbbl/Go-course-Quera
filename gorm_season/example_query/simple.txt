@@ -1,0 +1,280 @@
+
+var users []User
+result := db.Find(&users)
+// SELECT * FROM users;
+
+=======================================================================
+
+db.Select("name", "age").Find(&users)
+// SELECT name, age FROM users;
+
+db.Select([]string{"name", "age"}).Find(&users)
+// SELECT name, age FROM users;
+
+=======================================================================
+
+// برابری
+db.Where("name = ?", "ali").Find(&users)
+// SELECT * FROM users WHERE name = 'ali';
+
+// نابرابری
+db.Where("age <> ?", 25).Find(&users)
+
+// بیشتر از
+db.Where("age > ?", 18).Find(&users)
+
+=======================================================================
+
+// AND
+db.Where("name = ? AND age >= ?", "ali", 18).Find(&users)
+
+// OR
+db.Where("name = ? OR name = ?", "ali", "reza").Find(&users)
+
+// IN
+db.Where("name IN ?", []string{"ali", "reza", "mina"}).Find(&users)
+
+// LIKE
+db.Where("name LIKE ?", "%al%").Find(&users)
+
+=======================================================================
+
+// کاربران با نام‌های خاص
+db.Where("name IN ?", []string{"علی", "رضا", "مینا"}).Find(&users)
+
+
+// کاربران به جز این نام‌ها
+db.Where("name NOT IN ?", []string{"admin", "test"}).Find(&users)
+
+
+// شامل متن
+db.Where("name LIKE ?", "%محمد%").Find(&users)
+
+// شروع با
+db.Where("email LIKE ?", "ali%@%").Find(&users)
+
+// پایان با
+db.Where("email LIKE ?", "%@gmail.com").Find(&users)
+
+=======================================================================
+
+// ایمیل خالی
+db.Where("email IS NULL").Find(&users)
+
+// ایمیل پر
+db.Where("email IS NOT NULL").Find(&users)
+
+=======================================================================
+
+type UserOrder struct {
+    UserName  string
+    OrderID   uint
+    Amount    float64
+}
+
+var results []UserOrder
+db.Table("users").
+    Select("users.name as user_name, orders.id as order_id, orders.amount").
+    Joins("INNER JOIN orders ON users.id = orders.user_id").
+    Scan(&results)
+
+=======================================================================
+
+// کاربران + سفارشات + محصولات
+var userOrders []struct {
+    UserName    string
+    OrderAmount float64
+    ProductName string
+}
+
+db.Table("users").
+    Select("users.name, orders.amount, products.name").
+    Joins("INNER JOIN orders ON users.id = orders.user_id").
+    Joins("INNER JOIN order_items ON orders.id = order_items.order_id").
+    Joins("INNER JOIN products ON order_items.product_id = products.id").
+    Scan(&userOrders)
+
+=======================================================================
+
+// تعداد کل کاربران
+var count int64
+db.Model(&User{}).Count(&count)
+
+// تعداد کاربران فعال
+db.Model(&User{}).Where("active = ?", true).Count(&count)
+
+=======================================================================
+
+// مجموع خریدهای هر کاربر
+var userTotals []struct {
+    UserID uint
+    Total  float64
+}
+
+db.Model(&Order{}).
+    Select("user_id, SUM(amount) as total").
+    Where("status = ?", "completed").
+    Group("user_id").
+    Scan(&userTotals)
+
+// میانگین سن کاربران
+var avgAge float64
+db.Model(&User{}).Select("AVG(age)").Scan(&avgAge)
+
+=======================================================================
+
+// تعداد سفارشات هر کاربر
+var orderCounts []struct {
+    UserID    uint
+    OrderCount int
+}
+
+db.Model(&Order{}).
+    Select("user_id, COUNT(*) as order_count").
+    Group("user_id").
+    Scan(&orderCounts)
+
+=======================================================================
+
+// کاربران با بیش از 5 سفارش
+var activeUsers []struct {
+    UserID    uint
+    OrderCount int
+}
+
+db.Model(&Order{}).
+    Select("user_id, COUNT(*) as order_count").
+    Group("user_id").
+    Having("COUNT(*) > ?", 5).
+    Scan(&activeUsers)    
+
+=======================================================================
+
+// بر اساس سن صعودی
+db.Order("age asc").Find(&users)
+
+// بر اساس نام نزولی
+db.Order("name desc").Find(&users)
+
+// چند سطحی
+db.Order("age desc, name asc").Find(&users)
+
+=======================================================================
+
+// 10 کاربر اول
+db.Limit(10).Find(&users)
+
+// صفحه 2 (رکوردهای 11 تا 20)
+db.Limit(10).Offset(10).Find(&users)
+
+// ترکیب با ORDER
+db.Order("created_at desc").Limit(10).Offset(20).Find(&users)
+
+=======================================================================
+
+// Scopes برای کدهای قابل استفاده مجدد
+
+func ActiveUsers(db *gorm.DB) *gorm.DB {
+    return db.Where("active = ?", true)
+}
+
+func AgeGreaterThan(age int) func(db *gorm.DB) *gorm.DB {
+    return func(db *gorm.DB) *gorm.DB {
+        return db.Where("age > ?", age)
+    }
+}
+
+func NameLike(name string) func(db *gorm.DB) *gorm.DB {
+    return func(db *gorm.DB) *gorm.DB {
+        return db.Where("name LIKE ?", "%"+name+"%")
+    }
+}
+
+func CreatedAfter(date time.Time) func(db *gorm.DB) *gorm.DB {
+    return func(db *gorm.DB) *gorm.DB {
+        return db.Where("created_at > ?", date)
+    }
+}
+
+// کاربران فعال
+db.Scopes(ActiveUsers).Find(&users)
+
+// کاربران فعال بالای 18 سال
+db.Scopes(ActiveUsers, AgeGreaterThan(18)).Find(&users)
+
+// کاربران فعال با نام شامل "محمد"
+db.Scopes(ActiveUsers, NameLike("محمد")).Find(&users)
+
+// ترکیب چند scope
+db.Scopes(
+    ActiveUsers,
+    AgeGreaterThan(18),
+    NameLike("محمد"),
+    CreatedAfter(time.Now().AddDate(0, -1, 0)) // ایجاد شده در ماه گذشته
+).Find(&users)
+
+=======================================================================
+
+var users []User
+db.Raw("SELECT * FROM users WHERE age > ?", 18).Scan(&users)
+
+// با پارامترهای نامگذاری شده
+db.Raw("SELECT * FROM users WHERE age > @min_age AND active = @is_active", 
+    map[string]interface{}{"min_age": 18, "is_active": true}).Scan(&users)
+
+=======================================================================    
+
+// کاربران با سن بیشتر از میانگین --> subQuery
+
+subQuery := db.Model(&User{}).Select("AVG(age)")
+db.Where("age > (?)", subQuery).Find(&users)
+
+// کاربران با بیشترین سفارش
+subQuery := db.Model(&Order{}).
+    Select("user_id, COUNT(*) as order_count").
+    Group("user_id").
+    Order("order_count DESC").
+    Limit(1)
+
+db.Where("id = (?)", subQuery.Select("user_id")).Find(&users)    
+
+=======================================================================
+
+db.Model(&User{}).Where("name= ?", "quera").Update("age", 20)
+
+db.Model(&user).Where("name= ?", "quera").Update("age", 20)
+
+db.Model(&user).Updates(map[string]interface{}{"name": "quera", "age": 8})
+
+db.Where("name = ?", "quera").Delete(&name)
+
+db.Where("name = ?", "quera").Delete(&name)
+
+db.Delete(&users, []int{1,2,3})
+
+=======================================================================
+
+user := User{ID: 1}
+db.Model(&user).Updates(User{
+    Name: "Jane Smith",
+    Email: "jane@example.com",
+})
+
+// Or using map
+db.Model(&user).Updates(map[string]interface{}{
+    "name":  "Jane Smith",
+    "email": "jane@example.com",
+})
+
+=======================================================================
+
+// Update single column
+db.Model(&User{}).Where("id = ?", 1).UpdateColumn("name", "John Doe")
+
+// Update multiple columns (skips hooks)
+db.Model(&User{}).Where("id = ?", 1).UpdateColumns(User{
+    Name: "John Doe",
+    Age:  30,
+})
+
+=======================================================================
